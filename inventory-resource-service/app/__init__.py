@@ -1,0 +1,3 @@
+"""Inventory & Resource Management Service."""
+
+

@@ -1,0 +1,28 @@
+{
+  "name": "hospitality-platform-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart Hospitality & Retail Platform - Frontend Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter hospitality-platform dev",
+    "dev:main": "pnpm --filter hospitality-platform dev",
+    "build": "pnpm --filter guest-app build && pnpm --filter business-dashboard build && pnpm --filter admin-interface build",
+    "lint": "pnpm --filter guest-app lint && pnpm --filter business-dashboard lint && pnpm --filter admin-interface lint",
+    "type-check": "pnpm --filter guest-app type-check && pnpm --filter business-dashboard type-check && pnpm --filter admin-interface type-check",
+    "clean": "pnpm --filter guest-app clean && pnpm --filter business-dashboard clean && pnpm --filter admin-interface clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.6"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
+

@@ -1,0 +1,381 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: hospitality_postgres
+    hostname: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hospitality_network
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: hospitality_rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"      # AMQP port
+      - "15672:15672"    # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hospitality_network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_auth_service
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: "postgresql://auth_user:auth_password@postgres:5432/auth_db"
+      HOST: "0.0.0.0"
+      PORT: "8001"
+      JWT_SECRET_KEY: "your-secret-key-here-change-in-production-make-it-long-and-random"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Guest Interaction Service
+  guest-interaction-service:
+    build:
+      context: ./guest-interaction-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_guest_interaction
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: "postgresql://guest_user:guest_password@postgres:5432/guest_interaction_db"
+      HOST: "0.0.0.0"
+      PORT: "8000"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Booking Reservation Service
+  booking-reservation-service:
+    build:
+      context: ./booking-reservation-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_booking_reservation
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: "postgresql://booking_user:booking_password@postgres:5432/booking_reservation_db"
+      HOST: "0.0.0.0"
+      PORT: "8002"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+      INVENTORY_SERVICE_URL: "http://inventory-resource-service:8006"
+      PRICING_SERVICE_URL: "http://dynamic-pricing-service:8004"
+      PAYMENT_SERVICE_URL: "http://payment-billing-service:8005"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Dynamic Pricing Service
+  dynamic-pricing-service:
+    build:
+      context: ./dynamic-pricing-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_dynamic_pricing
+    ports:
+      - "8004:8004"
+    environment:
+      DATABASE_URL: "postgresql://pricing_user:pricing_password@postgres:5432/dynamic_pricing_db"
+      HOST: "0.0.0.0"
+      PORT: "8004"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Payment Billing Service
+  payment-billing-service:
+    build:
+      context: ./payment-billing-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_payment_billing
+    ports:
+      - "8005:8005"
+    environment:
+      DATABASE_URL: "postgresql://payment_user:payment_password@postgres:5432/payment_billing_db"
+      HOST: "0.0.0.0"
+      PORT: "8005"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Inventory Resource Service
+  inventory-resource-service:
+    build:
+      context: ./inventory-resource-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_inventory_resource
+    ports:
+      - "8006:8006"
+    environment:
+      DATABASE_URL: "postgresql://inventory_user:inventory_password@postgres:5432/inventory_db"
+      HOST: "0.0.0.0"
+      PORT: "8006"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Favorites Collections Service
+  favorites-collections-service:
+    build:
+      context: ./favorites-collections-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_favorites_collections
+    ports:
+      - "8007:8007"
+    environment:
+      DATABASE_URL: "postgresql://favorites_user:favorites_password@postgres:5432/favorites_collections_db"
+      HOST: "0.0.0.0"
+      PORT: "8007"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Feedback Sentiment Service
+  feedback-sentiment-service:
+    build:
+      context: ./feedback-sentiment-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_feedback_sentiment
+    ports:
+      - "8008:8008"
+    environment:
+      DATABASE_URL: "postgresql://feedback_user:feedback_password@postgres:5432/feedback_sentiment_db"
+      HOST: "0.0.0.0"
+      PORT: "8008"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Marketing Loyalty Service
+  marketing-loyalty-service:
+    build:
+      context: ./marketing-loyalty-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_marketing_loyalty
+    ports:
+      - "8009:8009"
+    environment:
+      DATABASE_URL: "postgresql://marketing_user:marketing_password@postgres:5432/marketing_loyalty_db"
+      HOST: "0.0.0.0"
+      PORT: "8009"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8009/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # BI Analytics Service
+  bi-analytics-service:
+    build:
+      context: ./bi-analytics-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_bi_analytics
+    ports:
+      - "8010:8010"
+    environment:
+      DATABASE_URL: "postgresql://analytics_user:analytics_password@postgres:5432/bi_analytics_db"
+      HOST: "0.0.0.0"
+      PORT: "8010"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Housekeeping Maintenance Service
+  housekeeping-maintenance-service:
+    build:
+      context: ./housekeeping-maintenance-service
+      dockerfile: ../Dockerfile.service
+    container_name: hospitality_housekeeping_maintenance
+    ports:
+      - "8011:8011"
+    environment:
+      DATABASE_URL: "postgresql://housekeeping_user:housekeeping_password@postgres:5432/housekeeping_db"
+      HOST: "0.0.0.0"
+      PORT: "8011"
+      RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile
+    container_name: hospitality_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - auth-service
+      - guest-interaction-service
+    networks:
+      - hospitality_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  hospitality_network:
+    driver: bridge
+
