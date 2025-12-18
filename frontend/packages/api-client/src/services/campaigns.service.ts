@@ -1,4 +1,8 @@
 import ApiClient from '../client';
+import { MockCampaignsService } from './mock-business.service';
+
+const USE_MOCK = !import.meta.env.VITE_API_BASE_URL;
+const mockService = new MockCampaignsService();
 
 export type CampaignType = 'discount' | 'points_multiplier' | 'bonus_points' | 'free_item' | 'bundle';
 export type CampaignStatus = 'draft' | 'scheduled' | 'active' | 'paused' | 'completed' | 'cancelled';
@@ -60,12 +64,8 @@ export interface CampaignStats {
 export class CampaignsService {
   constructor(private client: ApiClient) {}
 
-  async listCampaigns(params?: {
-    status?: CampaignStatus;
-    venue_id?: string;
-    page?: number;
-    page_size?: number;
-  }): Promise<CampaignListResponse> {
+  async listCampaigns(params?: { status?: CampaignStatus; venue_id?: string; page?: number; page_size?: number }): Promise<CampaignListResponse> {
+    if (USE_MOCK) return mockService.listCampaigns(params);
     return this.client.get('/v1/campaigns', { params });
   }
 
@@ -74,6 +74,7 @@ export class CampaignsService {
   }
 
   async createCampaign(data: CampaignCreate): Promise<Campaign> {
+    if (USE_MOCK) return mockService.createCampaign(data);
     return this.client.post('/v1/campaigns', data);
   }
 
@@ -82,17 +83,18 @@ export class CampaignsService {
   }
 
   async activateCampaign(campaignId: string): Promise<Campaign> {
+    if (USE_MOCK) return mockService.activateCampaign(campaignId);
     return this.client.post(`/v1/campaigns/${campaignId}/activate`);
   }
 
   async pauseCampaign(campaignId: string): Promise<Campaign> {
+    if (USE_MOCK) return mockService.pauseCampaign(campaignId);
     return this.client.post(`/v1/campaigns/${campaignId}/pause`);
   }
 
   async getActiveCampaigns(venueId?: string): Promise<Campaign[]> {
-    return this.client.get('/v1/campaigns/active', {
-      params: venueId ? { venue_id: venueId } : undefined,
-    });
+    if (USE_MOCK) return mockService.getActiveCampaigns(venueId);
+    return this.client.get('/v1/campaigns/active', { params: venueId ? { venue_id: venueId } : undefined });
   }
 
   async getCampaignStats(campaignId: string): Promise<CampaignStats> {

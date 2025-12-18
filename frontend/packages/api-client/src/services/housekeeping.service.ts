@@ -1,4 +1,8 @@
 import ApiClient from '../client';
+import { MockHousekeepingService } from './mock-business.service';
+
+const USE_MOCK = !import.meta.env.VITE_API_BASE_URL;
+const mockService = new MockHousekeepingService();
 
 export type TaskType = 'cleaning' | 'maintenance' | 'restocking' | 'inspection' | 'turndown';
 export type TaskStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'verified' | 'delayed' | 'cancelled';
@@ -72,6 +76,7 @@ export class HousekeepingService {
   constructor(private client: ApiClient) {}
 
   async listTasks(filters?: TaskFilters): Promise<TaskListResponse> {
+    if (USE_MOCK) return mockService.listTasks(filters);
     return this.client.get('/v1/tasks', { params: filters });
   }
 
@@ -96,30 +101,30 @@ export class HousekeepingService {
   }
 
   async startTask(taskId: string): Promise<Task> {
+    if (USE_MOCK) return mockService.startTask(taskId);
     return this.client.post(`/v1/tasks/${taskId}/start`);
   }
 
   async completeTask(taskId: string, completion?: TaskCompletion): Promise<Task> {
+    if (USE_MOCK) return mockService.completeTask(taskId);
     return this.client.post(`/v1/tasks/${taskId}/complete`, completion || {});
   }
 
   async markDelayed(taskId: string, reason: string): Promise<Task> {
-    return this.client.post(`/v1/tasks/${taskId}/delay`, null, {
-      params: { reason },
-    });
+    return this.client.post(`/v1/tasks/${taskId}/delay`, null, { params: { reason } });
   }
 
   async verifyTask(taskId: string, verifiedBy: string, qualityScore?: number): Promise<Task> {
-    return this.client.post(`/v1/tasks/${taskId}/verify`, null, {
-      params: { verified_by: verifiedBy, quality_score: qualityScore },
-    });
+    return this.client.post(`/v1/tasks/${taskId}/verify`, null, { params: { verified_by: verifiedBy, quality_score: qualityScore } });
   }
 
   async getPendingTasks(limit = 50): Promise<Task[]> {
+    if (USE_MOCK) return mockService.getPendingTasks(limit);
     return this.client.get('/v1/tasks/pending', { params: { limit } });
   }
 
   async getOverdueTasks(): Promise<Task[]> {
+    if (USE_MOCK) return mockService.getOverdueTasks();
     return this.client.get('/v1/tasks/overdue');
   }
 

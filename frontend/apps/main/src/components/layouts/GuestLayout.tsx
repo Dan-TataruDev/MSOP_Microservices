@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import { Search, User, LogOut, Menu, X, Heart, Trophy } from 'lucide-react';
+import { Search, User, LogOut, Menu, X, Heart, Trophy, Building2, LayoutDashboard } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 
@@ -8,6 +8,10 @@ export default function GuestLayout() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isAdmin = user?.roles?.includes('admin');
+  const isBusiness = user?.roles?.includes('business') || user?.roles?.includes('business_admin');
+  const canAccessBusiness = isAdmin || isBusiness; // Admin can access business panel too
 
   const handleLogout = () => {
     logout();
@@ -58,6 +62,24 @@ export default function GuestLayout() {
                     <User className="w-4 h-4" />
                     <span>{user?.name}</span>
                   </Link>
+                  {canAccessBusiness && (
+                    <Link
+                      to="/business"
+                      className="flex items-center space-x-1 text-slate-700 hover:text-emerald-600 transition-colors"
+                    >
+                      <Building2 className="w-4 h-4" />
+                      <span>Business</span>
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center space-x-1 text-slate-700 hover:text-orange-600 transition-colors"
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>Admin</span>
+                    </Link>
+                  )}
                   <Button variant="ghost" size="sm" onClick={handleLogout}>
                     <LogOut className="w-4 h-4 mr-2" />
                     Logout
@@ -122,6 +144,26 @@ export default function GuestLayout() {
                       <User className="w-4 h-4" />
                       <span>{user?.name}</span>
                     </Link>
+                    {canAccessBusiness && (
+                      <Link
+                        to="/business"
+                        className="flex items-center space-x-2 text-slate-700 hover:text-emerald-600"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Building2 className="w-4 h-4" />
+                        <span>Business Panel</span>
+                      </Link>
+                    )}
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        className="flex items-center space-x-2 text-slate-700 hover:text-orange-600"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        <span>Admin Panel</span>
+                      </Link>
+                    )}
                     <button
                       onClick={() => {
                         handleLogout();

@@ -1,5 +1,6 @@
 import ApiClient from '../client';
 import { getServiceUrl } from '../config';
+import { MockPaymentService } from './mock-payment.service';
 import type {
   Payment,
   PaymentIntent,
@@ -51,39 +52,39 @@ export interface Refund {
   processed_at?: string;
 }
 
+const USE_MOCK = !import.meta.env.VITE_API_BASE_URL;
+const mockService = new MockPaymentService();
+
 export class PaymentService {
   constructor(private client: ApiClient) {}
 
   async createPaymentIntent(orderId: string, amount: number): Promise<ApiResponse<PaymentIntent>> {
-    // Backend endpoint: POST /api/v1/payments
+    if (USE_MOCK) return mockService.createPaymentIntent(orderId, amount);
     const url = getServiceUrl('payments', '/v1/payments');
     return this.client.post(url, { booking_id: orderId, amount });
   }
 
   async confirmPayment(intentId: string): Promise<ApiResponse<Payment>> {
-    // Backend endpoint: POST /api/v1/payments/{payment_id}/confirm
+    if (USE_MOCK) return mockService.confirmPayment(intentId);
     const url = getServiceUrl('payments', `/v1/payments/${intentId}/confirm`);
     return this.client.post(url);
   }
 
   async getPayment(id: string): Promise<ApiResponse<Payment>> {
-    // Backend endpoint: GET /api/v1/payments/{payment_id}
     const url = getServiceUrl('payments', `/v1/payments/${id}`);
     return this.client.get(url);
   }
 
   async getOrderPayment(orderId: string): Promise<ApiResponse<Payment>> {
-    // Backend endpoint: GET /api/v1/payments/booking/{booking_id}
     const url = getServiceUrl('payments', `/v1/payments/booking/${orderId}`);
     return this.client.get(url);
   }
 
   async getGuestPayments(guestId: string): Promise<Payment[]> {
-    // Get billing records for guest, then fetch payments
+    if (USE_MOCK) return mockService.getGuestPayments(guestId);
     const billingUrl = getServiceUrl('payments', `/v1/billing/guest/${guestId}`);
     const billingRecords = await this.client.get<BillingRecord[]>(billingUrl);
     
-    // Fetch payments for each booking
     const payments: Payment[] = [];
     for (const record of billingRecords) {
       try {
@@ -100,11 +101,10 @@ export class PaymentService {
   }
 
   async getGuestInvoices(guestId: string): Promise<Invoice[]> {
-    // Get billing records first
+    if (USE_MOCK) return mockService.getGuestInvoices(guestId);
     const billingUrl = getServiceUrl('payments', `/v1/billing/guest/${guestId}`);
     const billingRecords = await this.client.get<BillingRecord[]>(billingUrl);
     
-    // Fetch invoices for each booking
     const invoices: Invoice[] = [];
     for (const record of billingRecords) {
       try {
@@ -121,6 +121,7 @@ export class PaymentService {
   }
 
   async getInvoice(invoiceId: string): Promise<ApiResponse<Invoice>> {
+    if (USE_MOCK) return mockService.getInvoice(invoiceId);
     const url = getServiceUrl('payments', `/v1/invoices/${invoiceId}`);
     return this.client.get(url);
   }
@@ -131,17 +132,20 @@ export class PaymentService {
   }
 
   async getBookingInvoices(bookingId: string): Promise<Invoice[]> {
+    if (USE_MOCK) return mockService.getBookingInvoices(bookingId);
     const url = getServiceUrl('payments', `/v1/invoices/booking/${bookingId}`);
     const response = await this.client.get<ApiResponse<Invoice[]>>(url);
     return Array.isArray(response.data) ? response.data : [response.data];
   }
 
   async getBillingRecords(guestId: string): Promise<BillingRecord[]> {
+    if (USE_MOCK) return mockService.getBillingRecords(guestId);
     const url = getServiceUrl('payments', `/v1/billing/guest/${guestId}`);
     return this.client.get(url);
   }
 
   async getBookingBillingRecords(bookingId: string): Promise<BillingRecord[]> {
+    if (USE_MOCK) return mockService.getBookingBillingRecords(bookingId);
     const url = getServiceUrl('payments', `/v1/billing/booking/${bookingId}`);
     return this.client.get(url);
   }
@@ -158,7 +162,6 @@ export class PaymentService {
   }
 
   async refund(paymentId: string, amount?: number): Promise<ApiResponse<Payment>> {
-    // Backend endpoint: POST /api/v1/refunds (separate refunds router)
     const url = getServiceUrl('payments', '/v1/refunds');
     return this.client.post(url, { payment_id: paymentId, amount });
   }

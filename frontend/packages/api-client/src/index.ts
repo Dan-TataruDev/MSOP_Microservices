@@ -13,7 +13,7 @@ export { AnalyticsService } from './services/analytics.service';
 export { PersonalizationService } from './services/personalization.service';
 export { FavoritesService } from './services/favorites.service';
 export { FeedbackService } from './services/feedback.service';
-export { LoyaltyService } from './services/loyalty.service';
+export { LoyaltyService, type LoyaltyTier, type Offer, type RedeemResult } from './services/loyalty.service';
 export { PricingService } from './services/pricing.service';
 export { HousekeepingService } from './services/housekeeping.service';
 export { CampaignsService } from './services/campaigns.service';

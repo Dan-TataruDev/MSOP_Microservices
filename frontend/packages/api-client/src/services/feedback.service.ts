@@ -1,4 +1,8 @@
 import ApiClient from '../client';
+import { MockFeedbackService } from './mock-business.service';
+
+const USE_MOCK = !import.meta.env.VITE_API_BASE_URL;
+const mockService = new MockFeedbackService();
 
 export interface FeedbackCreate {
   venue_id: string;
@@ -84,24 +88,17 @@ export class FeedbackService {
     return this.client.get(`/v1/feedback/${reference}/status`);
   }
 
-  async listFeedback(params?: {
-    venue_id?: string;
-    status?: string;
-    page?: number;
-    page_size?: number;
-  }): Promise<FeedbackListResponse> {
+  async listFeedback(params?: { venue_id?: string; status?: string; page?: number; page_size?: number }): Promise<FeedbackListResponse> {
+    if (USE_MOCK) return mockService.listFeedback(params);
     return this.client.get('/v1/feedback', { params });
   }
 
-  async getInsightsSummary(params?: {
-    venue_id?: string;
-    start_date?: string;
-    end_date?: string;
-  }): Promise<InsightsSummary> {
+  async getInsightsSummary(params?: { venue_id?: string; start_date?: string; end_date?: string }): Promise<InsightsSummary> {
     return this.client.get('/v1/insights/summary', { params });
   }
 
   async getVenueInsights(venueId: string): Promise<VenueInsights> {
+    if (USE_MOCK) return mockService.getVenueInsights(venueId);
     return this.client.get(`/v1/insights/venues/${venueId}`);
   }
 }

@@ -1,5 +1,6 @@
 import ApiClient from '../client';
 import { getServiceUrl } from '../config';
+import { MockPersonalizationService } from './mock-personalization.service';
 import type {
   GuestProfile,
   GuestPreference,
@@ -22,15 +23,20 @@ import type {
   PaginatedResponse,
 } from '@hospitality-platform/types';
 
+const USE_MOCK = !import.meta.env.VITE_API_BASE_URL;
+const mockService = new MockPersonalizationService();
+
 export class PersonalizationService {
   constructor(private client: ApiClient) {}
 
   // Guest Profile Management
   async getGuestProfile(guestId: string): Promise<ApiResponse<GuestProfile>> {
+    if (USE_MOCK) return mockService.getGuestProfile(guestId) as any;
     return this.client.get(getServiceUrl('personalization', `/api/v1/guests/${guestId}/profile`));
   }
 
   async getCurrentGuestProfile(): Promise<ApiResponse<GuestProfile>> {
+    if (USE_MOCK) return mockService.getCurrentGuestProfile() as any;
     return this.client.get(getServiceUrl('personalization', '/api/v1/guests/me/profile'));
   }
 
@@ -50,6 +56,7 @@ export class PersonalizationService {
     guestId: string,
     activeOnly: boolean = true
   ): Promise<ApiResponse<GuestPreference[]>> {
+    if (USE_MOCK) return mockService.getGuestPreferences(guestId) as any;
     return this.client.get(getServiceUrl('personalization', `/api/v1/guests/${guestId}/preferences`), {
       params: { active_only: activeOnly },
     });
@@ -66,6 +73,7 @@ export class PersonalizationService {
     guestId: string,
     data: CreatePreferenceRequest
   ): Promise<ApiResponse<GuestPreference>> {
+    if (USE_MOCK) return mockService.createPreference(guestId, data) as any;
     return this.client.post(getServiceUrl('personalization', `/api/v1/guests/${guestId}/preferences`), data);
   }
 
@@ -91,6 +99,7 @@ export class PersonalizationService {
   }
 
   async getPreferenceCategories(): Promise<ApiResponse<PreferenceCategory[]>> {
+    if (USE_MOCK) return mockService.getPreferenceCategories() as any;
     return this.client.get(getServiceUrl('personalization', '/api/v1/preference-categories'));
   }
 
@@ -106,6 +115,7 @@ export class PersonalizationService {
     guestId: string,
     filters?: InteractionFilter
   ): Promise<ApiResponse<GuestInteraction[]>> {
+    if (USE_MOCK) return mockService.getGuestInteractions(guestId, filters) as any;
     return this.client.get(getServiceUrl('personalization', `/api/v1/guests/${guestId}/interactions`), {
       params: filters,
     });
@@ -119,6 +129,7 @@ export class PersonalizationService {
   async getPersonalizationContext(
     guestId: string
   ): Promise<ApiResponse<PersonalizationContext>> {
+    if (USE_MOCK) return mockService.getPersonalizationContext(guestId) as any;
     return this.client.get(getServiceUrl('personalization', `/api/v1/guests/${guestId}/personalization-context`));
   }
 
@@ -126,6 +137,7 @@ export class PersonalizationService {
     guestId: string,
     activeOnly: boolean = true
   ): Promise<ApiResponse<GuestSegment[]>> {
+    if (USE_MOCK) return mockService.getGuestSegments(guestId) as any;
     return this.client.get(getServiceUrl('personalization', `/api/v1/guests/${guestId}/segments`), {
       params: { active_only: activeOnly },
     });
@@ -135,6 +147,7 @@ export class PersonalizationService {
     guestId: string,
     activeOnly: boolean = true
   ): Promise<ApiResponse<BehaviorSignal[]>> {
+    if (USE_MOCK) return mockService.getBehaviorSignals(guestId) as any;
     return this.client.get(getServiceUrl('personalization', `/api/v1/guests/${guestId}/behavior-signals`), {
       params: { active_only: activeOnly },
     });

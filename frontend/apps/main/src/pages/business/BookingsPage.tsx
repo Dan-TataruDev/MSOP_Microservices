@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, Users } from 'lucide-react';
 import { apiServices, useAuthStore } from '@/stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { formatDate, formatTime } from '@hospitality-platform/utils';
+import { formatDate } from '@hospitality-platform/utils';
 import type { Booking } from '@hospitality-platform/types';
 
 export default function BookingsPage() {
@@ -69,7 +69,7 @@ export default function BookingsPage() {
                         <div className="text-sm font-semibold text-slate-900">
                           {formatDate(booking.date)}
                         </div>
-                        <div className="text-sm text-slate-500">{formatTime(booking.time)}</div>
+                        <div className="text-sm text-slate-500">{booking.time}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-sm text-slate-900">

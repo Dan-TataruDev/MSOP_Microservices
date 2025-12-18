@@ -1,4 +1,8 @@
 import ApiClient from '../client';
+import { MockPricingService } from './mock-business.service';
+
+const USE_MOCK = !import.meta.env.VITE_API_BASE_URL;
+const mockService = new MockPricingService();
 
 export type DemandLevel = 'very_low' | 'low' | 'normal' | 'high' | 'very_high';
 
@@ -67,6 +71,7 @@ export class PricingService {
   constructor(private client: ApiClient) {}
 
   async getPriceEstimate(request: PriceEstimateRequest): Promise<PriceEstimateResponse> {
+    if (USE_MOCK) return mockService.getPriceEstimate(request);
     return this.client.post('/v1/pricing/estimate', request);
   }
 
@@ -75,9 +80,8 @@ export class PricingService {
   }
 
   async listRules(venueId?: string): Promise<PricingRule[]> {
-    return this.client.get('/v1/rules', {
-      params: venueId ? { venue_id: venueId } : undefined,
-    });
+    if (USE_MOCK) return mockService.listRules(venueId);
+    return this.client.get('/v1/rules', { params: venueId ? { venue_id: venueId } : undefined });
   }
 
   async getRule(ruleId: string): Promise<PricingRule> {
@@ -85,8 +89,7 @@ export class PricingService {
   }
 
   async listBasePrices(venueId: string): Promise<BasePrice[]> {
-    return this.client.get('/v1/base-prices', {
-      params: { venue_id: venueId },
-    });
+    if (USE_MOCK) return mockService.listBasePrices(venueId);
+    return this.client.get('/v1/base-prices', { params: { venue_id: venueId } });
   }
 }

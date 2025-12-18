@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Star, Gift, ArrowUp, Clock, Sparkles } from 'lucide-react';
+import { Trophy, Star, Gift, Clock, Check, Loader2 } from 'lucide-react';
 import { apiServices, useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { formatCurrency } from '@hospitality-platform/utils';
-import type { LoyaltyTier } from '@hospitality-platform/api-client';
+import type { LoyaltyTier, Offer } from '@hospitality-platform/api-client';
 
 const tierConfig: Record<LoyaltyTier, { color: string; bgColor: string; icon: string }> = {
   bronze: { color: 'text-amber-700', bgColor: 'bg-amber-100', icon: '🥉' },
@@ -16,7 +16,10 @@ const tierConfig: Record<LoyaltyTier, { color: string; bgColor: string; icon: st
 
 export default function LoyaltyPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isAuthenticated, user } = useAuthStore();
+  const [redeemingId, setRedeemingId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const { data: member, isLoading: memberLoading } = useQuery({
     queryKey: ['loyalty-member', user?.id],
@@ -43,6 +46,27 @@ export default function LoyaltyPage() {
     },
     enabled: isAuthenticated,
   });
+
+  const redeemMutation = useMutation({
+    mutationFn: async (offerId: string) => {
+      if (!user?.id) throw new Error('User ID required');
+      return await apiServices.loyalty.redeemOffer(user.id, offerId);
+    },
+    onMutate: (offerId) => setRedeemingId(offerId),
+    onSuccess: (result) => {
+      setSuccessMessage(result.message);
+      queryClient.invalidateQueries({ queryKey: ['loyalty-member', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['available-offers', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['points-history', user?.id] });
+      setTimeout(() => setSuccessMessage(null), 3000);
+    },
+    onSettled: () => setRedeemingId(null),
+  });
+
+  const canRedeem = (offer: Offer) => {
+    if (!offer.points_cost || offer.points_cost === 0) return true;
+    return (member?.points_balance || 0) >= offer.points_cost;
+  };
 
   if (!isAuthenticated) {
     return (
@@ -157,33 +181,70 @@ export default function LoyaltyPage() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Gift className="w-5 h-5 mr-2" />
-              Available Offers
+              Available Rewards
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {successMessage && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                <Check className="w-5 h-5 text-green-600" />
+                <span className="text-green-800 text-sm font-medium">{successMessage}</span>
+              </div>
+            )}
             {offers && offers.length > 0 ? (
               <div className="space-y-4">
-                {offers.map((offer) => (
-                  <div key={offer.id} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-semibold text-slate-900">{offer.name}</h4>
-                        <p className="text-sm text-slate-600 mt-1">{offer.description}</p>
-                        {offer.points_cost && (
-                          <p className="text-xs text-blue-600 mt-2 font-medium">
-                            {offer.points_cost.toLocaleString()} points
-                          </p>
-                        )}
+                {offers.map((offer) => {
+                  const isRedeeming = redeemingId === offer.id;
+                  const affordable = canRedeem(offer);
+                  const isFree = !offer.points_cost || offer.points_cost === 0;
+                  
+                  return (
+                    <div key={offer.id} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-slate-900">{offer.name}</h4>
+                            {isFree && (
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">FREE</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-600 mt-1">{offer.description}</p>
+                          <div className="flex items-center gap-3 mt-2">
+                            {offer.points_cost && offer.points_cost > 0 && (
+                              <span className={`text-xs font-medium ${affordable ? 'text-blue-600' : 'text-red-500'}`}>
+                                {offer.points_cost.toLocaleString()} points
+                              </span>
+                            )}
+                            <span className="text-xs text-slate-400">
+                              Expires {new Date(offer.valid_until).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={!affordable || isRedeeming}
+                          onClick={() => redeemMutation.mutate(offer.id)}
+                          className="flex-shrink-0"
+                        >
+                          {isRedeeming ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : isFree ? (
+                            'Claim'
+                          ) : affordable ? (
+                            'Redeem'
+                          ) : (
+                            'Not enough'
+                          )}
+                        </Button>
                       </div>
-                      <Sparkles className="w-5 h-5 text-purple-500 flex-shrink-0" />
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
                 <Gift className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                <p className="text-slate-500">No offers available right now</p>
+                <p className="text-slate-500">No rewards available right now</p>
                 <p className="text-sm text-slate-400 mt-1">Check back soon for exclusive deals!</p>
               </div>
             )}

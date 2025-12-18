@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import { LayoutDashboard, Users, Building2, LogOut, Menu, X, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, LogOut, Menu, X, BarChart3, Home } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
@@ -62,6 +62,16 @@ export default function AdminLayout() {
             <p className="text-xs text-slate-500">{user?.email}</p>
           </div>
           <Button
+            variant="outline"
+            size="sm"
+            fullWidth
+            onClick={() => navigate('/')}
+            leftIcon={<Home className="w-4 h-4" />}
+            className="mb-2"
+          >
+            Main Site
+          </Button>
+          <Button
             variant="ghost"
             size="sm"
             fullWidth
@@ -108,6 +118,15 @@ export default function AdminLayout() {
                 </Link>
               );
             })}
+            <div className="pt-2 border-t border-slate-200">
+              <button
+                onClick={() => { setMobileMenuOpen(false); navigate('/'); }}
+                className="flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-700 hover:bg-slate-100 w-full"
+              >
+                <Home className="w-5 h-5" />
+                <span className="font-medium">Main Site</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -127,6 +146,14 @@ export default function AdminLayout() {
               </h1>
             </div>
             <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/')}
+                leftIcon={<Home className="w-4 h-4" />}
+              >
+                Main Site
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

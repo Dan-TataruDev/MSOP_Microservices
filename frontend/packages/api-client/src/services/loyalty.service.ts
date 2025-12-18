@@ -1,4 +1,5 @@
 import ApiClient from '../client';
+import { MockLoyaltyService } from './mock-loyalty.service';
 
 export type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum';
 
@@ -65,14 +66,32 @@ export interface Offer {
   is_active: boolean;
 }
 
+export interface RedeemResult {
+  success: boolean;
+  message: string;
+  remaining_points: number;
+}
+
+// Use mock service when real API is not available
+const USE_MOCK_SERVICE = import.meta.env.VITE_USE_MOCK_LOYALTY === 'true' || 
+  !import.meta.env.VITE_API_BASE_URL;
+
+const mockService = new MockLoyaltyService();
+
 export class LoyaltyService {
   constructor(private client: ApiClient) {}
 
   async getMemberStatus(guestId: string): Promise<LoyaltyMember> {
+    if (USE_MOCK_SERVICE) {
+      return mockService.getMemberStatus(guestId);
+    }
     return this.client.get(`/v1/loyalty/member/${guestId}`);
   }
 
   async getPointsHistory(guestId: string, limit = 20): Promise<PointsHistoryResponse> {
+    if (USE_MOCK_SERVICE) {
+      return mockService.getPointsHistory(guestId, limit);
+    }
     return this.client.get(`/v1/loyalty/member/${guestId}/history`, {
       params: { limit },
     });
@@ -105,8 +124,18 @@ export class LoyaltyService {
   }
 
   async getAvailableOffers(guestId?: string): Promise<Offer[]> {
+    if (USE_MOCK_SERVICE) {
+      return mockService.getAvailableOffers(guestId);
+    }
     return this.client.get('/v1/offers', {
       params: guestId ? { guest_id: guestId } : undefined,
     });
+  }
+
+  async redeemOffer(guestId: string, offerId: string): Promise<RedeemResult> {
+    if (USE_MOCK_SERVICE) {
+      return mockService.redeemOffer(guestId, offerId);
+    }
+    return this.client.post(`/v1/offers/${offerId}/redeem`, { guest_id: guestId });
   }
 }

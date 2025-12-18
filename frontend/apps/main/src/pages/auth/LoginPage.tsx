@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
@@ -55,14 +55,8 @@ export default function LoginPage() {
         setUser(frontendUser);
         setTokens(response.data.tokens);
         
-        // Redirect based on user role
-        if (frontendUser.roles.includes('admin')) {
-          navigate('/admin');
-        } else if (frontendUser.roles.includes('business')) {
-          navigate('/business');
-        } else {
-          navigate('/');
-        }
+        // Always redirect to main page after login
+        navigate('/');
       } catch (error) {
         console.error('Error processing login response:', error);
         setError('Failed to process login. Please try again.');
